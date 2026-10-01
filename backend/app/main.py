@@ -1,7 +1,9 @@
+import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 from app.core.config import settings
 from app.core.logging import logger
 from app.core.database import Base, engine, SessionLocal
@@ -99,10 +101,35 @@ def health_check():
         "simulation_running": simulation_engine.is_running
     }
 
-@app.get("/", tags=["System"])
-def root():
-    return {
-        "message": "Welcome to RollNRide Smart Mobility Platform API",
-        "docs": "/docs",
-        "health": "/health"
-    }
+# Production Frontend Single Page Application (SPA) integration
+_possible_dist_paths = [
+    os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "frontend", "dist"),
+    os.path.join(os.path.dirname(os.path.dirname(__file__)), "dist"),
+    "/app/frontend/dist",
+    "/app/dist",
+]
+frontend_dist = next((p for p in _possible_dist_paths if os.path.isdir(p)), None)
+
+if frontend_dist:
+    assets_dir = os.path.join(frontend_dist, "assets")
+    if os.path.isdir(assets_dir):
+        app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
+
+    @app.get("/{full_path:path}", include_in_schema=False)
+    async def serve_spa(full_path: str):
+        target = os.path.join(frontend_dist, full_path)
+        if full_path and os.path.isfile(target):
+            return FileResponse(target)
+        index_file = os.path.join(frontend_dist, "index.html")
+        if os.path.isfile(index_file):
+            return FileResponse(index_file)
+        return JSONResponse(status_code=404, content={"detail": "Not found"})
+else:
+    @app.get("/", tags=["System"])
+    def root():
+        return {
+            "message": "Welcome to RollNRide Smart Mobility Platform API",
+            "docs": "/docs",
+            "health": "/health"
+        }
+

@@ -6,9 +6,28 @@ export function useWebSocket(channel: 'fleet' | 'dashboard' | 'traffic' | 'notif
   const socketRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const host = window.location.host;
-    const wsUrl = `${protocol}//${host}/ws/${channel}`;
+    let wsUrl = '';
+    const customWs = import.meta.env.VITE_WS_URL as string | undefined;
+    const customApi = import.meta.env.VITE_API_URL as string | undefined;
+
+    if (customWs) {
+      const base = customWs.replace(/\/+$/, '');
+      wsUrl = `${base}/${channel}`;
+    } else if (customApi && customApi.startsWith('http')) {
+      try {
+        const apiUrl = new URL(customApi);
+        const wsProtocol = apiUrl.protocol === 'https:' ? 'wss:' : 'ws:';
+        wsUrl = `${wsProtocol}//${apiUrl.host}/ws/${channel}`;
+      } catch {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const host = window.location.host;
+        wsUrl = `${protocol}//${host}/ws/${channel}`;
+      }
+    } else {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const host = window.location.host;
+      wsUrl = `${protocol}//${host}/ws/${channel}`;
+    }
 
     const ws = new WebSocket(wsUrl);
     socketRef.current = ws;
