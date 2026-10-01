@@ -11,11 +11,18 @@ export function useWebSocket(channel: 'fleet' | 'dashboard' | 'traffic' | 'notif
     const customApi = import.meta.env.VITE_API_URL as string | undefined;
 
     if (customWs) {
-      const base = customWs.replace(/\/+$/, '');
+      let base = customWs.trim().replace(/\/+$/, '');
+      if (!base.startsWith('ws://') && !base.startsWith('wss://')) {
+        base = `wss://${base}`;
+      }
       wsUrl = `${base}/${channel}`;
-    } else if (customApi && customApi.startsWith('http')) {
+    } else if (customApi && customApi !== '/api') {
       try {
-        const apiUrl = new URL(customApi);
+        let apiTarget = customApi.trim();
+        if (!apiTarget.startsWith('http://') && !apiTarget.startsWith('https://')) {
+          apiTarget = `https://${apiTarget}`;
+        }
+        const apiUrl = new URL(apiTarget);
         const wsProtocol = apiUrl.protocol === 'https:' ? 'wss:' : 'ws:';
         wsUrl = `${wsProtocol}//${apiUrl.host}/ws/${channel}`;
       } catch {
@@ -28,6 +35,7 @@ export function useWebSocket(channel: 'fleet' | 'dashboard' | 'traffic' | 'notif
       const host = window.location.host;
       wsUrl = `${protocol}//${host}/ws/${channel}`;
     }
+
 
     const ws = new WebSocket(wsUrl);
     socketRef.current = ws;

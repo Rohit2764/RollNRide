@@ -19,11 +19,8 @@ services:
         value: "true"
 
   # Frontend Static Web App (React 18 + Vite + Tailwind)
-  - type: web
+  - type: static
     name: rollnride-frontend
-    runtime: static
-    region: oregon
-    plan: free
     rootDir: frontend
     buildCommand: npm install && npm run build
     staticPublishPath: ./dist

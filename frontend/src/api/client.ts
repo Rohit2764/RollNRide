@@ -19,7 +19,19 @@ import {
   OperationsDashboardResponse
 } from '../types';
 
-const API_BASE = (import.meta.env.VITE_API_URL || '/api').replace(/\/+$/, '');
+function getApiBaseUrl(): string {
+  let raw = (import.meta.env.VITE_API_URL || '/api').trim().replace(/\/+$/, '');
+  if (!raw || raw === '/api') return '/api';
+  if (!raw.startsWith('http://') && !raw.startsWith('https://') && !raw.startsWith('/')) {
+    raw = `https://${raw}`;
+  }
+  if (raw.startsWith('http') && !raw.endsWith('/api')) {
+    raw = `${raw}/api`;
+  }
+  return raw;
+}
+
+const API_BASE = getApiBaseUrl();
 
 class ApiClient {
   private getToken(): string | null {
